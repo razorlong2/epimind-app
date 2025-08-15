@@ -929,7 +929,7 @@ python -m spacy download en_core_web_sm
                                 st.balloons()
                                 # Auto-navighează la analize
                                 st.session_state['current_page'] = 'analize'
-                                st.experimental_rerun()
+                                st.rerun()
                         
                         with col2:
                             if st.button("📋 Aplică Selectiv", key="apply_selective"):
@@ -1121,11 +1121,6 @@ def page_home():
     
     st.markdown('</div>', unsafe_allow_html=True)
 
-# Păstrați toate celelalte pagini din fișierul original:
-# page_patient(), page_devices(), page_severity(), page_microbio(), 
-# page_comorbid(), page_urine(), page_analize(), page_results_and_history()
-
-# Pentru brevitate, includem doar page_patient ca exemplu:
 def page_patient():
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown('<h4>Date pacient</h4>', unsafe_allow_html=True)
@@ -1218,8 +1213,138 @@ def page_analize():
     st.markdown('<div class="small-muted">Note: pragurile utilizate sunt orientative. Adaptați-le la protocoalele locale.</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-# Adăugați celelalte pagini din fișierul original...
-# Pentru a economisi spațiu, le-am prescurtat, dar în fișierul final includeți toate
+def page_comorbid():
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<h4>Comorbidități</h4>', unsafe_allow_html=True)
+
+    if 'comorbiditati_selectate' not in st.session_state:
+        st.session_state['comorbiditati_selectate'] = {}
+
+    for categorie, subcategorii in COMORBIDITATI.items():
+        with st.expander(f"📋 {categorie}"):
+            for subcategorie, valori in subcategorii.items():
+                if isinstance(valori, dict):
+                    options = list(valori.keys())
+                    selected = st.selectbox(f"{subcategorie}", ["Absent"] + options, key=f"comorbid_{subcategorie}")
+                    if selected != "Absent":
+                        st.session_state['comorbiditati_selectate'][subcategorie] = selected
+                elif isinstance(valori, (int, float)):
+                    if st.checkbox(subcategorie, key=f"comorbid_{subcategorie}"):
+                        st.session_state['comorbiditati_selectate'][subcategorie] = valori
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+def page_urine():
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<h4>Analiză urinară</h4>', unsafe_allow_html=True)
+
+    analiza = st.checkbox('Analiză urinară disponibilă', key='analiza_urina')
+
+    if analiza:
+        st.markdown("**Sediment urinar:**")
+        c1, c2 = st.columns(2)
+        with c1:
+            st.number_input('Eritrocite (per câmp)', 0, 100, key='sed_eritrocite')
+            st.number_input('Leucocite (per câmp)', 0, 100, key='sed_leucocite')
+        with c2:
+            st.number_input('Cilindri (per câmp)', 0, 50, key='sed_cilindri')
+            st.selectbox('Bacterii', ['Absente', 'Rare', 'Moderate', 'Numeroase'], key='sed_bacterii')
+
+        # Save to session state
+        st.session_state['sediment'] = {
+            'eritrocite': st.session_state.get('sed_eritrocite', 0),
+            'leucocite': st.session_state.get('sed_leucocite', 0),
+            'cilindri': st.session_state.get('sed_cilindri', 0),
+            'bacterii': st.session_state.get('sed_bacterii', 'Absente')
+        }
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+def page_results_and_history():
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<h4>📋 Rezultate & Istoric</h4>', unsafe_allow_html=True)
+
+    # Display last result
+    if 'last_result' in st.session_state and st.session_state['last_result']:
+        result = st.session_state['last_result']
+
+        # Risk level styling
+        risk_colors = {
+            'CRITIC': 'risk-critical',
+            'FOARTE ÎNALT': 'risk-high',
+            'ÎNALT': 'risk-high',
+            'MODERAT': 'risk-moderate',
+            'SCĂZUT': 'risk-low'
+        }
+
+        risk_class = risk_colors.get(result['nivel'], 'risk-moderate')
+
+        st.markdown(f'<div class="risk-alert {risk_class}">', unsafe_allow_html=True)
+        st.markdown(f'**🎯 Scor IAAM: {result["scor"]}** — Nivel risc: **{result["nivel"]}**')
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # Details
+        st.markdown("**📊 Detalii calcul:**")
+        for detail in result['detalii']:
+            st.write(f"• {detail}")
+
+        # Recommendations
+        st.markdown("**⚕️ Recomandări:**")
+        for rec in result['recomandari']:
+            st.write(f"• {rec}")
+
+        # Export options
+        st.markdown("---")
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            if st.button("📄 Export JSON"):
+                json_str = json.dumps(result, indent=2, ensure_ascii=False)
+                st.download_button(
+                    "📥 Descarcă JSON",
+                    data=json_str,
+                    file_name=f"iaam_result_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                    mime="application/json"
+                )
+
+        with col2:
+            if st.button("📊 Export CSV"):
+                # Create a simple CSV from the result
+                csv_data = f"Pacient,Scor,Nivel,Data\n{result['payload'].get('nume_pacient', 'N/A')},{result['scor']},{result['nivel']},{result['timestamp']}"
+                st.download_button(
+                    "📥 Descarcă CSV",
+                    data=csv_data,
+                    file_name=f"iaam_result_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                    mime="text/csv"
+                )
+    else:
+        st.info("🔍 Nu există rezultate disponibile. Efectuați o evaluare IAAM pentru a vedea rezultatele aici.")
+
+    # Audit history
+    st.markdown("---")
+    st.markdown("**📚 Istoric evaluări:**")
+    audit_df = load_audit_df()
+
+    if not audit_df.empty:
+        st.dataframe(audit_df, use_container_width=True)
+
+        # Simple analytics
+        if len(audit_df) > 1:
+            st.markdown("**📈 Statistici rapide:**")
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                st.metric("Total evaluări", len(audit_df))
+            with col2:
+                avg_score = audit_df['scor'].mean() if 'scor' in audit_df.columns else 0
+                st.metric("Scor mediu", f"{avg_score:.1f}")
+            with col3:
+                high_risk_count = len(audit_df[audit_df['nivel'].isin(['CRITIC', 'FOARTE ÎNALT'])]) if 'nivel' in audit_df.columns else 0
+                st.metric("Risc înalt", high_risk_count)
+    else:
+        st.info("📝 Nu există istoric de evaluări.")
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
 def render_current_page():
     page = st.session_state.get('current_page','home')
@@ -1227,7 +1352,7 @@ def render_current_page():
         page_home()
     elif page == 'patient':
         page_patient()
-    elif page == 'ocr':  # PAGINĂ NOUĂ
+    elif page == 'ocr':
         page_ocr()
     elif page == 'devices':
         page_devices()
@@ -1237,12 +1362,12 @@ def render_current_page():
         page_microbio()
     elif page == 'analize':
         page_analize()
-    # elif page == 'comorbid':
-    #     page_comorbid()
-    # elif page == 'urine':
-    #     page_urine()
-    # elif page == 'results':
-    #     page_results_and_history()
+    elif page == 'comorbid':
+        page_comorbid()
+    elif page == 'urine':
+        page_urine()
+    elif page == 'results':
+        page_results_and_history()
     else:
         st.info('Pagina nu există')
 
@@ -1320,12 +1445,12 @@ def main():
                     st.warning('Eroare scriere audit: ' + str(e))
                 st.success(f'Calcul efectuat — Scor: {scor} • Nivel: {nivel}')
                 st.session_state['current_page'] = 'results'
-                st.experimental_rerun()
+                st.rerun()
     
     with c2:
         if st.button('📄 OCR', key='goto_ocr'):
             st.session_state['current_page'] = 'ocr'
-            st.experimental_rerun()
+            st.rerun()
     
     with c3:
         if st.button('🔄 Reset', key='reset_main'):
@@ -1335,7 +1460,7 @@ def main():
                     del st.session_state[k]
                 except Exception:
                     pass
-            st.experimental_rerun()
+            st.rerun()
     
     with c4:
         ocr_status = "🟢 OCR-NLP Activ" if OCR_AVAILABLE else "🟡 Necesită instalare OCR-NLP"
