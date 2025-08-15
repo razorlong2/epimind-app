@@ -1,12 +1,12 @@
 modules = ["python-3.12"]
-run = "streamlit run undefined"
+run = "streamlit run IAAM_PREDICTOR.py --server.address 0.0.0.0 --server.headless true --server.enableCORS=false --server.enableWebsocketCompression=false"
 
 [nix]
 channel = "stable-25_05"
 packages = ["glibcLocales", "tesseract"]
 
 [deployment]
-run = ["sh", "-c", "streamlit run undefined"]
+run = ["sh", "-c", "streamlit run IAAM_PREDICTOR.py --server.address 0.0.0.0 --server.headless true --server.enableCORS=false --server.enableWebsocketCompression=false"]
 
 [workflows]
 runButton = "Run IAAM Predictor"

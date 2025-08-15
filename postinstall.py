@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 """
 Script pentru instalarea modelelor spaCy pe Streamlit Cloud
