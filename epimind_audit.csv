@@ -1,0 +1,3 @@
+timestamp,pacient,sectie,ore_spitalizare,scor,nivel,agent,rezistente
+2025-08-15T08:55:46.419377,Pacient_001,ATI,96,10,SCĂZUT,,
+2025-08-15T08:56:00.879440,Pacient_001,ATI,96,50,MODERAT,Klebsiella pneumoniae,CRE
